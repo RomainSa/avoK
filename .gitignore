@@ -1,4 +1,7 @@
-data/
+data/raw/*
+!data/raw/__init__.py
+data/extracted/*
+!data/extracted/__init__.py
 dev/
 dev.py
 *.xml
