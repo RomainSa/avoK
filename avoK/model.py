@@ -29,7 +29,7 @@ class Lawsuit(object):
         else:
             self.tags = []
             for line in self.text.split('\n'):
-                match = re.search(patterns.tags_regex, line)
+                match = patterns.tags_regex.search(line)
                 if match is not None:
                     self.tags.append(match.group(1))
 
