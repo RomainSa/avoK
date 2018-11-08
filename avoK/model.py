@@ -15,7 +15,7 @@ class Lawsuit(object):
         self.tags = None
 
     def _parse_xml(self):
-        with open(self.xml_file, 'r') as f:
+        with open(self.xml_file, 'r', encoding='latin-1') as f:
             self.text = f.read()
 
     def _get_tags(self):
@@ -29,7 +29,12 @@ class Lawsuit(object):
         else:
             self.tags = []
             for line in self.text.split('\n'):
-                match = patterns.juri_tags.search(line)
+                # closing tags (<TAG>.../TAG>)
+                match = patterns.juri_tag_pair.search(line)
+                if match is not None:
+                    self.tags.append(match.group(1))
+                # single tags (<TAG key=value.../>)
+                match = patterns.juri_tag_single.search(line)
                 if match is not None:
                     self.tags.append(match.group(1))
 
@@ -49,11 +54,14 @@ class Lawsuit(object):
         elif tag not in self.tags:
             raise ValueError('Tag "%s" is not present in text.' % tag)
         else:
-            matches = re.findall(patterns.get_tag_text.format(tag=tag), self.text)
+            # closing tags (<TAG>.../TAG>)
+            matches = re.findall(patterns.get_tag_text_pair.format(tag=tag), self.text)
             if len(matches) > 0:
                 return matches[0]
-            else:
-                return None
+            # single tags (<TAG key=value.../>)
+            matches = re.findall(patterns.get_tag_text_single.format(tag=tag), self.text)
+            if len(matches) > 0:
+                return matches[0]
 
     def has_lawyer(self):
         """
