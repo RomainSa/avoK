@@ -3,7 +3,7 @@ import re
 from avoK import patterns
 
 
-class Affaire(object):
+class Lawsuit(object):
 
     def __init__(self, xml_file):
         """
