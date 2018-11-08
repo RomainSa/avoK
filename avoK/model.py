@@ -13,14 +13,12 @@ class Lawsuit(object):
         self.xml_file = xml_file
         self.text = None
         self.tags = None
-        # other
-        self.tags_regex = '<([A-Z_]+)\/?>'
 
-    def parse_xml(self):
+    def _parse_xml(self):
         with open(self.xml_file, 'r') as f:
             self.text = f.read()
 
-    def get_tags(self):
+    def _get_tags(self):
         """
         Parse XML tags
 
@@ -31,9 +29,31 @@ class Lawsuit(object):
         else:
             self.tags = []
             for line in self.text.split('\n'):
-                match = re.search(self.tags_regex, line)
+                match = re.search(patterns.tags_regex, line)
                 if match is not None:
                     self.tags.append(match.group(1))
+
+    def read(self):
+        """
+        Function to be called in order to read XML file
+        """
+        self._parse_xml()
+        self._get_tags()
+
+    def get_text(self, tag=None):
+        """
+        Return lawsuit text (full if no text is specified, else return text corresponding to tags)
+        """
+        if tag is None:
+            return self.text
+        elif tag not in self.tags:
+            raise ValueError('Tag "%s" is not present in text.' % tag)
+        else:
+            matches = re.findall(patterns.get_tag_text.format(tag=tag), self.text)
+            if len(matches) > 0:
+                return matches[0]
+            else:
+                return None
 
     def has_lawyer(self):
         """
