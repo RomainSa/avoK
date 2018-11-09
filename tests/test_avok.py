@@ -72,6 +72,9 @@ class TestLawsuitMethods(unittest.TestCase):
         """
         self.assertEqual(contenu, self.lawsuit.get_text(tag='CONTENU'))
 
+    def test_has_lawyer(self):
+        self.assertTrue(self.lawsuit.has_lawyer())
+
     def test_get_names(self):
         raise NotImplementedError()
 
