@@ -15,7 +15,7 @@ class Lawsuit(object):
         self.tags = None
 
     def _parse_xml(self):
-        with open(self.xml_file, 'r', encoding='latin-1') as f:
+        with open(self.xml_file, 'r', encoding='utf-8') as f:
             self.text = f.read()
 
     def _get_tags(self):
