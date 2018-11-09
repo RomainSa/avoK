@@ -68,3 +68,9 @@ class Lawsuit(object):
         Check if trial report contains lawyer or not
         """
         return patterns.has_lawyer.search(self.text) is not None
+
+    def get_lawyers(self):
+        """
+        Return a list of lawyers found in text
+        """
+        return patterns.lawyer_name.findall(self.text)
