@@ -82,6 +82,9 @@ class TestLawsuitMethods(unittest.TestCase):
         lawyers = ['Marco PANTANI', 'Bernard LAVILLIERS']
         self.assertEqual(set(lawyers), set(self.lawsuit.get_lawyers()))
 
+    def test_get_names(self):
+        raise NotImplementedError()
+
 
 if __name__ == '__main__':
     unittest.main()
