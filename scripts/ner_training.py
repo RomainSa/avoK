@@ -15,6 +15,7 @@ names_url = 'https://fr.wikipedia.org/wiki/Liste_de_pr%C3%A9noms_fran%C3%A7ais_e
 html = urllib.request.urlopen(names_url).read()
 soup = bs.BeautifulSoup(html)
 names = [e.text for e in soup.find_all('b')][2:]
+titles = ['m.', 'mme', 'mlle', 'docteur']
 
 # show it
 print(' '.join(df.TOKEN.values))
@@ -56,6 +57,10 @@ for sentence in sentences:
         previous_is_lowercase = (1 if previous_word != 'BEG' else -1) if previous_word.lower() == previous_word else 0
         next_is_lowercase = (1 if next_word != 'END' else -1) if next_word.lower() == next_word else 0
 
+        is_first_uppercase = 1 if len(word) > 0 and word[0].upper() == word[0] and word[1:].lower() == word[1:] else 0
+        previous_is_first_uppercase = (1 if previous_word != 'BEG' else -1) if len(previous_word) > 0 and previous_word[0].upper() == previous_word[0] and previous_word[1:].lower() == previous_word[1:] else 0
+        next_is_first_uppercase = (1 if next_word != 'END' else -1) if len(next_word) > 0 and next_word[0].upper() == next_word[0] and next_word[1:].lower() == next_word[1:] else 0
+
         is_uppercase = 1 if word.upper() == word else 0
         previous_is_uppercase = (1 if previous_word != 'BEG' else -1) if previous_word.upper() == previous_word else 0
         next_is_uppercase = (1 if next_word != 'END' else -1) if next_word.upper() == next_word else 0
@@ -64,11 +69,20 @@ for sentence in sentences:
         previous_is_name = 1 if previous_word in names else 0
         next_is_name = 1 if next_word in names else 0
 
+        is_title = 1 if word in titles else 0
+        previous_is_title = 1 if previous_word in titles else 0
+        next_is_title = 1 if next_word in titles else 0
+
         features_ = [word_index_in_sentence, word_size, previous_word_size, next_word_size,
                      is_lowercase, previous_is_lowercase, next_is_lowercase,
-                     is_uppercase, previous_is_uppercase, next_is_uppercase]
+                     is_first_uppercase, previous_is_first_uppercase, next_is_first_uppercase,
+                     is_uppercase, previous_is_uppercase, next_is_uppercase,
+                     is_name, previous_is_name, next_is_name,
+                     is_title, previous_is_title, next_is_title]
 
         features.append(features_)
+
+df['FEATURES'] = pd.Series(features)
 
 # split data into training and test
 np.random.seed(42)
@@ -80,7 +94,12 @@ x_train, y_train = [features[i] for i in train_index], [entities_flat[i] for i i
 x_test, y_test = [features[i] for i in test_index], [entities_flat[i] for i in test_index]
 
 # train a RandomForestClassifier
-model = RandomForestClassifier(max_depth=4, class_weight='balanced')
-model.fit(x_train, y_train)
-print(roc_auc_score(y_train, model.predict(x_train)))
-print(roc_auc_score(y_test, model.predict(x_test)))
+for max_depth in [2, 3, 4, 5, 6, 7, 8]:
+    model = RandomForestClassifier(max_depth=max_depth, class_weight='balanced', n_estimators=50)
+    model.fit(x_train, y_train)
+    print('--- Max depth: %s ---' % max_depth)
+    print('Train AUC %.2f' % roc_auc_score(y_train, model.predict(x_train)))
+    print('Test AUC %.2f' % roc_auc_score(y_test, model.predict(x_test)))
+
+# add predictions to dataset
+df['PREDICTIONS'] = model.predict(df['FEATURES'].values.tolist())
