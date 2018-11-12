@@ -6,6 +6,10 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score
 
+from keras.models import Sequential
+from keras.layers import Dense, Embedding
+from keras.layers import LSTM
+
 # load French NET dataset
 file = 'https://raw.githubusercontent.com/EuropeanaNewspapers/ner-corpora/master/enp_FR.bnf.bio/enp_FR.bnf.bio'
 df = pd.read_csv(file, sep='\s', names=['TOKEN', 'ENTITY'], dtype={'TOKEN': str, 'ENTITY': str})
@@ -26,6 +30,7 @@ df['ENTITY'] = df['ENTITY'].replace('I-PER', 1).replace('O', 0)
 
 # prepare data in list of sentences and list of entities
 index_to_word = pd.Series(df.TOKEN.unique()).to_dict()
+index_to_word = {k+1: index_to_word[k] for k in index_to_word.keys()}   # so that first index is 1
 word_to_index = {index_to_word[k]: k for k in index_to_word.keys()}
 entities_flat = list(df['ENTITY'].values)
 sentences, entities = [], []
@@ -37,6 +42,7 @@ for i, row in df.iterrows():
         sentences.append(s)
         entities.append(e)
         s, e = [], []
+
 sentences.append(s)
 entities.append(e)
 
@@ -51,9 +57,9 @@ for sentence in sentences:
         # features
         word_index_in_sentence = i
 
-        word_index = word_to_index[word] if word not in ['BEG', 'END'] else -1
-        previous_word_index = word_to_index[previous_word] if previous_word not in ['BEG', 'END'] else -1
-        next_word_index = word_to_index[next_word] if next_word not in ['BEG', 'END'] else -1
+        word_index = word_to_index[word] if word not in ['BEG', 'END'] else 0
+        previous_word_index = word_to_index[previous_word] if previous_word not in ['BEG', 'END'] else 0
+        next_word_index = word_to_index[next_word] if next_word not in ['BEG', 'END'] else 0
 
         word_size = len(word)
         previous_word_size = len(previous_word) if previous_word != 'BEG' else -1
@@ -113,3 +119,25 @@ model.fit(x_train, y_train)
 
 # add predictions to dataset
 df['PREDICTIONS'] = model.predict(df['FEATURES'].values.tolist())
+
+# train LSTM model
+max_features = len(word_to_index)
+maxlen = len(features[0])
+batch_size = 32
+model = Sequential()
+model.add(Embedding(max_features, 128))
+model.add(LSTM(128, dropout=0.2, recurrent_dropout=0.2))
+model.add(Dense(1, activation='sigmoid'))
+
+# try using different optimizers and different optimizer configs
+x_train, x_test, y_train, y_test = np.array(x_train), np.array(x_test), np.array(y_train), np.array(y_test)
+model.compile(loss='binary_crossentropy',
+              optimizer='adam',
+              metrics=['accuracy'])
+model.fit(x_train, y_train,
+          batch_size=batch_size,
+          epochs=1,
+          validation_data=(x_test, y_test))
+score, acc = model.evaluate(x_test, y_test, batch_size=batch_size)
+print('Test score:', score)
+print('Test accuracy:', acc)
