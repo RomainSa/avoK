@@ -25,6 +25,8 @@ df['ENTITY'] = df['ENTITY'].replace('I-LOC', 'O').replace('I-ORG', 'O')
 df['ENTITY'] = df['ENTITY'].replace('I-PER', 1).replace('O', 0)
 
 # prepare data in list of sentences and list of entities
+index_to_word = pd.Series(df.TOKEN.unique()).to_dict()
+word_to_index = {index_to_word[k]: k for k in index_to_word.keys()}
 entities_flat = list(df['ENTITY'].values)
 sentences, entities = [], []
 s, e = [], []
@@ -48,6 +50,10 @@ for sentence in sentences:
 
         # features
         word_index_in_sentence = i
+
+        word_index = word_to_index[word] if word not in ['BEG', 'END'] else -1
+        previous_word_index = word_to_index[previous_word] if previous_word not in ['BEG', 'END'] else -1
+        next_word_index = word_to_index[next_word] if next_word not in ['BEG', 'END'] else -1
 
         word_size = len(word)
         previous_word_size = len(previous_word) if previous_word != 'BEG' else -1
@@ -73,7 +79,8 @@ for sentence in sentences:
         previous_is_title = 1 if previous_word in titles else 0
         next_is_title = 1 if next_word in titles else 0
 
-        features_ = [word_index_in_sentence, word_size, previous_word_size, next_word_size,
+        features_ = [word_index_in_sentence, word_index, previous_word_index, next_word_index,
+                     word_size, previous_word_size, next_word_size,
                      is_lowercase, previous_is_lowercase, next_is_lowercase,
                      is_first_uppercase, previous_is_first_uppercase, next_is_first_uppercase,
                      is_uppercase, previous_is_uppercase, next_is_uppercase,
@@ -100,6 +107,9 @@ for max_depth in [2, 3, 4, 5, 6, 7, 8]:
     print('--- Max depth: %s ---' % max_depth)
     print('Train AUC %.2f' % roc_auc_score(y_train, model.predict(x_train)))
     print('Test AUC %.2f' % roc_auc_score(y_test, model.predict(x_test)))
+    print('Test accuracy %.2f' % model.score(x_test, y_test))
+model = RandomForestClassifier(max_depth=6, class_weight='balanced', n_estimators=50)
+model.fit(x_train, y_train)
 
 # add predictions to dataset
 df['PREDICTIONS'] = model.predict(df['FEATURES'].values.tolist())
